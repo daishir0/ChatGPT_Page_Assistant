@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Text Assistant - Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ChatGPT Text Assistant Settings</h1>
+            <p class="subtitle">Customize your extension preferences</p>
+        </header>
+
+        <main>
+            <section class="settings-section">
+                <h2>Prompt Template</h2>
+                <p class="description">
+                    Customize the prompt template that will be sent to ChatGPT. 
+                    Use placeholders: <code>{pageTitle}</code>, <code>{pageUrl}</code>, <code>{selectedText}</code>, <code>{question}</code>
+                </p>
+                
+                <div class="form-group">
+                    <label for="promptTemplate">Prompt Template:</label>
+                    <textarea 
+                        id="promptTemplate" 
+                        rows="12" 
+                        placeholder="Enter your custom prompt template..."
+                    ></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button id="resetPrompt" class="btn-secondary">Reset to Default</button>
+                </div>
+            </section>
+
+            <section class="settings-section">
+                <h2>ChatGPT Options</h2>
+                
+                <div class="form-group">
+                    <div class="checkbox-container">
+                        <label for="temporaryChat" class="checkbox-label">
+                            <input type="checkbox" id="temporaryChat" class="checkbox-input">
+                            <span class="checkbox-text">
+                                <strong>Temporary Chat Mode</strong>
+                                <small>Open ChatGPT in temporary chat mode (conversations won't be saved)</small>
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <!-- Debug info -->
+                    <div id="toggleDebug" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+                </div>
+            </section>
+
+            <!-- Preview section removed as requested -->
+        </main>
+
+        <footer>
+            <div class="save-container">
+                <button id="saveSettings" class="btn-primary">Save Settings</button>
+                <div id="saveStatus" class="save-status"></div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

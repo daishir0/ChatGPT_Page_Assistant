@@ -1,0 +1,73 @@
+.popup-content {
+  padding: 20px;
+  width: 280px;
+}
+
+.popup-content h2 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+}
+
+.popup-content p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #10a37f;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0d8068;
+}
+
+.btn-secondary {
+  background-color: #f1f3f4;
+  color: #5f6368;
+  border: 1px solid #dadce0;
+}
+
+.btn-secondary:hover {
+  background-color: #e8eaed;
+}
+
+.instructions h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.instructions ol {
+  margin: 0;
+  padding-left: 18px;
+  color: #666;
+  font-size: 13px;
+}
+
+.instructions li {
+  margin-bottom: 4px;
+  line-height: 1.3;
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    }
+    h2 {
+      margin: 0 0 12px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    p {
+      margin: 0 0 16px 0;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .feature {
+      margin-bottom: 12px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .feature strong {
+      color: #10a37f;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #10a37f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    button:hover {
+      background: #0d8068;
+    }
+  </style>
+</head>
+<body>
+  <h2>ChatGPT Page Assistant</h2>
+  <p>Select text on web pages and ask ChatGPT questions about it.</p>
+  
+  <div class="feature">
+    <strong>How to use:</strong><br>
+    1. Select text<br>
+    2. Enter your question<br>
+    3. Check the answer in ChatGPT
+  </div>
+  
+  <div class="feature">
+    <strong>Features:</strong><br>
+    • Automatic text selection capture<br>
+    • Include page information in questions<br>
+    • Automatic sending to ChatGPT
+  </div>
+  
+  <button id="openChatGPT">Open ChatGPT</button>
+  <button id="openSettings" style="margin-top: 10px; background-color: #f0f0f0; color: #333;">Settings</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
