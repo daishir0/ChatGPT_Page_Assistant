@@ -1,6 +1,11 @@
-// Default settings
-const DEFAULT_SETTINGS = {
-  promptTemplate: `I have a question about text selected from a web page.
+// Debug flag
+const DEBUG = false;
+
+// Default prompt
+const DEFAULT_PROMPT = {
+  id: 'default',
+  title: 'Default Prompt',
+  template: `I have a question about text selected from a web page.
 
 **Web Page Information:**
 Title: {pageTitle}
@@ -13,107 +18,65 @@ URL: {pageUrl}
 {question}
 
 Please answer my question based on the selected text content above.`,
-  temporaryChat: false // Default to false to make toggle changes more visible
+  isDefault: true
 };
 
-// Debug flag
-const DEBUG = false;
+// Default settings
+const DEFAULT_SETTINGS = {
+  prompts: [DEFAULT_PROMPT],
+  temporaryChat: false,
+  lastUsedPromptId: 'default'
+};
 
 // DOM elements
+let promptList;
+let promptTitleInput;
 let promptTemplateTextarea;
+let defaultPromptCheckbox;
 let temporaryChatCheckbox;
-let saveButton;
-let resetButton;
+let savePromptButton;
+let deletePromptButton;
+let resetPromptButton;
+let addNewPromptButton;
+let saveSettingsButton;
+let exportSettingsButton;
+let importSettingsButton;
+let importFileInput;
 let saveStatus;
 let toggleDebug;
+
+// Currently editing prompt
+let currentPromptId = null;
 
 // Initialize the options page
 document.addEventListener('DOMContentLoaded', function() {
   if (DEBUG) console.log('Options page loaded');
   
-  // Initialize elements first
+  // Initialize elements
   initializeElements();
   
-  // Then load settings
-  loadSettings();
-  
-  // Finally setup event listeners
+  // Setup event listeners
   setupEventListeners();
   
-  // Force default prompt template immediately
-  promptTemplateTextarea.value = DEFAULT_SETTINGS.promptTemplate;
-  
-  // Double check prompt template after a delay to ensure it's set
-  setTimeout(() => {
-    ensurePromptTemplate();
-    if (DEBUG) console.log('Double-checking prompt template:', promptTemplateTextarea.value.substring(0, 30) + '...');
-    
-    // Force a storage check
-    checkStorageDirectly();
-  }, 500);
+  // Load settings
+  loadSettings();
 });
 
-// Ensure prompt template is set
-function ensurePromptTemplate() {
-  if (!promptTemplateTextarea.value || promptTemplateTextarea.value.trim() === '') {
-    if (DEBUG) console.log('Setting default prompt template');
-    promptTemplateTextarea.value = DEFAULT_SETTINGS.promptTemplate;
-  }
-  
-  // Force the textarea to update by triggering events
-  const event = new Event('input', { bubbles: true });
-  promptTemplateTextarea.dispatchEvent(event);
-  
-  // Log the current value
-  if (DEBUG) console.log('Current prompt template value:', promptTemplateTextarea.value.substring(0, 50) + '...');
-  
-  // Force a redraw by manipulating the DOM
-  const currentHeight = promptTemplateTextarea.style.height;
-  promptTemplateTextarea.style.height = (parseInt(currentHeight || '100') + 1) + 'px';
-  setTimeout(() => {
-    promptTemplateTextarea.style.height = currentHeight;
-  }, 10);
-}
-
-// Directly check storage for debugging
-function checkStorageDirectly() {
-  chrome.storage.sync.get(null, function(items) {
-    if (DEBUG) console.log('Direct storage check:', items);
-    
-    if (DEBUG && toggleDebug) {
-      toggleDebug.innerHTML += '<br><strong>Storage contents:</strong><br>';
-      
-      if (items && Object.keys(items).length > 0) {
-        for (const [key, value] of Object.entries(items)) {
-          let displayValue = value;
-          
-          // For prompt template, show truncated version
-          if (key === 'promptTemplate' && typeof value === 'string') {
-            displayValue = value.substring(0, 50) + '...';
-          }
-          
-          toggleDebug.innerHTML += `${key}: ${displayValue}<br>`;
-        }
-      } else {
-        toggleDebug.innerHTML += 'Storage is empty!<br>';
-      }
-    }
-    
-    // If prompt template is missing or empty in storage, save the default
-    if (!items.promptTemplate || items.promptTemplate.trim() === '') {
-      if (DEBUG) console.log('Prompt template missing in storage, saving default');
-      chrome.storage.sync.set({ promptTemplate: DEFAULT_SETTINGS.promptTemplate }, function() {
-        if (DEBUG) console.log('Default prompt template saved to storage');
-      });
-    }
-  });
-}
-
+// Initialize elements
 function initializeElements() {
+  promptList = document.getElementById('promptList');
+  promptTitleInput = document.getElementById('promptTitle');
   promptTemplateTextarea = document.getElementById('promptTemplate');
+  defaultPromptCheckbox = document.getElementById('defaultPrompt');
   temporaryChatCheckbox = document.getElementById('temporaryChat');
-  saveButton = document.getElementById('saveSettings');
-  resetButton = document.getElementById('resetPrompt');
+  savePromptButton = document.getElementById('savePrompt');
+  deletePromptButton = document.getElementById('deletePrompt');
+  resetPromptButton = document.getElementById('resetPrompt');
+  addNewPromptButton = document.getElementById('addNewPrompt');
+  saveSettingsButton = document.getElementById('saveSettings');
+  exportSettingsButton = document.getElementById('exportSettings');
+  importSettingsButton = document.getElementById('importSettings');
+  importFileInput = document.getElementById('importFile');
   saveStatus = document.getElementById('saveStatus');
   toggleDebug = document.getElementById('toggleDebug');
   
@@ -121,21 +84,7 @@ function initializeElements() {
   if (DEBUG && toggleDebug) {
     toggleDebug.textContent = `Initial checkbox state: ${temporaryChatCheckbox ? 'Found' : 'Not found'}`;
     
-    // Add a manual toggle button for testing
-    const manualToggleBtn = document.createElement('button');
-    manualToggleBtn.textContent = 'Force Toggle';
-    manualToggleBtn.style.marginTop = '10px';
-    manualToggleBtn.style.padding = '5px';
-    manualToggleBtn.onclick = function() {
-      if (temporaryChatCheckbox) {
-        temporaryChatCheckbox.checked = !temporaryChatCheckbox.checked;
-        updateToggleDebug('manual toggle to ' + temporaryChatCheckbox.checked);
-        saveSettings();
-      }
-    };
-    toggleDebug.parentNode.appendChild(manualToggleBtn);
-    
-    // Add a storage reset button
+    // Add a storage reset button for testing
     const resetStorageBtn = document.createElement('button');
     resetStorageBtn.textContent = 'Reset Storage';
     resetStorageBtn.style.marginTop = '10px';
@@ -143,7 +92,7 @@ function initializeElements() {
     resetStorageBtn.style.padding = '5px';
     resetStorageBtn.onclick = function() {
       chrome.storage.sync.clear(function() {
-        updateToggleDebug('storage cleared');
+        updateDebugInfo('Storage cleared');
         loadSettings();
       });
     };
@@ -151,101 +100,394 @@ function initializeElements() {
   }
 }
 
+// Setup event listeners
 function setupEventListeners() {
-  // Save settings
-  saveButton.addEventListener('click', saveSettings);
+  // Prompt related
+  savePromptButton.addEventListener('click', saveCurrentPrompt);
+  deletePromptButton.addEventListener('click', deleteCurrentPrompt);
+  resetPromptButton.addEventListener('click', resetPromptToDefault);
+  addNewPromptButton.addEventListener('click', createNewPrompt);
   
-  // Reset prompt to default
-  resetButton.addEventListener('click', resetPromptToDefault);
+  // Settings related
+  saveSettingsButton.addEventListener('click', saveSettings);
   
-  // Simple checkbox change event - only update UI, don't save
-  if (temporaryChatCheckbox) {
-    temporaryChatCheckbox.addEventListener('change', function() {
-      if (DEBUG) console.log('Checkbox changed:', this.checked);
-      if (DEBUG && toggleDebug) {
-        toggleDebug.innerHTML += '<br>Checkbox changed to: ' + this.checked + ' (not saved yet)';
-      }
-      // No auto-save on checkbox change - user must click Save Settings button
-    });
-  } else {
-    if (DEBUG) console.error('Temporary chat checkbox not found!');
-    if (toggleDebug) {
-      toggleDebug.textContent = 'ERROR: Checkbox element not found!';
-      toggleDebug.style.color = 'red';
+  // Import/Export related
+  exportSettingsButton.addEventListener('click', exportSettings);
+  importSettingsButton.addEventListener('click', function() {
+    importFileInput.click();
+  });
+  importFileInput.addEventListener('change', importSettings);
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    // Ctrl+S or Cmd+S to save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      saveSettings();
     }
-  }
-  
-  // Monitor template changes but don't auto-save
-  promptTemplateTextarea.addEventListener('input', function() {
-    if (DEBUG) console.log('Template changed, waiting for Save button click');
-    // No auto-save on template change - user must click Save Settings button
+    
+    // Escape to close (if opened in popup)
+    if (e.key === 'Escape') {
+      window.close();
+    }
   });
 }
 
+// Load settings
 function loadSettings() {
-  // First set default values directly
-  if (promptTemplateTextarea) {
-    promptTemplateTextarea.value = DEFAULT_SETTINGS.promptTemplate;
-  }
-  
-  if (temporaryChatCheckbox) {
-    temporaryChatCheckbox.checked = DEFAULT_SETTINGS.temporaryChat;
-  }
-  
-  // Then try to load from storage
   chrome.storage.sync.get(DEFAULT_SETTINGS, function(settings) {
     if (DEBUG) console.log('Loaded settings from storage:', settings);
     
-    // Set prompt template - ensure it's not empty
-    if (promptTemplateTextarea) {
-      // Force default prompt if empty or undefined
-      if (!settings.promptTemplate || settings.promptTemplate.trim() === '') {
-        settings.promptTemplate = DEFAULT_SETTINGS.promptTemplate;
-        if (DEBUG) console.log('Using default prompt template');
-        
-        // Save the default prompt immediately
-        chrome.storage.sync.set({ promptTemplate: DEFAULT_SETTINGS.promptTemplate }, function() {
-          if (DEBUG) console.log('Default prompt template saved to storage');
-        });
-      }
-      
-      // Set the value and log it
-      promptTemplateTextarea.value = settings.promptTemplate;
-      if (DEBUG) console.log('Prompt template set to:', promptTemplateTextarea.value.substring(0, 50) + '...');
-      
-      // Ensure the prompt is visible by forcing focus and blur
-      promptTemplateTextarea.focus();
-      promptTemplateTextarea.blur();
-      
-      // Force a redraw of the textarea
-      setTimeout(() => {
-        // Trigger input event to ensure any listeners are notified
-        const event = new Event('input', { bubbles: true });
-        promptTemplateTextarea.dispatchEvent(event);
-        
-        // Log the value again after redraw
-        if (DEBUG) console.log('After redraw, prompt template is:',
-          promptTemplateTextarea.value ?
-          promptTemplateTextarea.value.substring(0, 50) + '...' :
-          'EMPTY!');
-      }, 100);
+    // Set default prompts if none exist
+    if (!settings.prompts || !Array.isArray(settings.prompts) || settings.prompts.length === 0) {
+      settings.prompts = [DEFAULT_PROMPT];
+      if (DEBUG) console.log('Using default prompt');
     }
     
-    // Set temporary chat checkbox - simple approach
+    // Update prompt list
+    updatePromptList(settings.prompts);
+    
+    // Set temporary chat mode
     if (temporaryChatCheckbox) {
       temporaryChatCheckbox.checked = settings.temporaryChat;
-      if (DEBUG) console.log('Temporary chat checkbox set to:', temporaryChatCheckbox.checked);
-      if (DEBUG && toggleDebug) {
-        toggleDebug.innerHTML += '<br>Loaded setting: ' + settings.temporaryChat;
-      }
-    } else {
-      if (DEBUG) console.error('Cannot set checkbox value - element not found');
+      if (DEBUG) console.log('Temporary chat mode set to:', temporaryChatCheckbox.checked);
     }
+    
+    // Select last used prompt or default prompt
+    const promptToSelect = settings.lastUsedPromptId || 'default';
+    selectPrompt(promptToSelect, settings.prompts);
   });
 }
 
+// Update prompt list
+function updatePromptList(prompts) {
+  // Clear the list
+  promptList.innerHTML = '';
+  
+  // Add prompts to the list
+  prompts.forEach(prompt => {
+    const li = document.createElement('li');
+    li.textContent = prompt.title;
+    li.dataset.id = prompt.id;
+    
+    if (prompt.isDefault) {
+      li.classList.add('default');
+    }
+    
+    li.addEventListener('click', function() {
+      selectPrompt(prompt.id, prompts);
+    });
+    
+    promptList.appendChild(li);
+  });
+}
+
+// Select prompt
+function selectPrompt(promptId, prompts) {
+  // Update current prompt ID
+  currentPromptId = promptId;
+  
+  // Update active state in list
+  const items = promptList.querySelectorAll('li');
+  items.forEach(item => {
+    if (item.dataset.id === promptId) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+  
+  // Get selected prompt
+  const selectedPrompt = prompts.find(p => p.id === promptId) || DEFAULT_PROMPT;
+  
+  // Set form values
+  promptTitleInput.value = selectedPrompt.title;
+  promptTemplateTextarea.value = selectedPrompt.template;
+  defaultPromptCheckbox.checked = selectedPrompt.isDefault;
+  
+  // Update delete button state (default prompt cannot be deleted)
+  deletePromptButton.disabled = promptId === 'default';
+  
+  if (DEBUG) console.log('Selected prompt:', selectedPrompt);
+}
+
+// Create new prompt
+function createNewPrompt() {
+  // Generate new prompt ID
+  const newId = 'prompt_' + Date.now();
+  
+  // Create new prompt object
+  const newPrompt = {
+    id: newId,
+    title: 'New Prompt',
+    template: DEFAULT_PROMPT.template,
+    isDefault: false
+  };
+  
+  // Get current settings from storage
+  chrome.storage.sync.get(DEFAULT_SETTINGS, function(settings) {
+    // Add new prompt to the list
+    const updatedPrompts = [...settings.prompts, newPrompt];
+    
+    // Save to storage
+    chrome.storage.sync.set({ prompts: updatedPrompts }, function() {
+      if (DEBUG) console.log('Created new prompt:', newPrompt);
+      
+      // Update prompt list
+      updatePromptList(updatedPrompts);
+      
+      // Select new prompt
+      selectPrompt(newId, updatedPrompts);
+      
+      // Show success message
+      showSaveStatus('New prompt created', 'success');
+    });
+  });
+}
+
+// Save current prompt
+function saveCurrentPrompt() {
+  if (!currentPromptId) return;
+  
+  // Get values from form
+  const title = promptTitleInput.value.trim() || 'Untitled Prompt';
+  const template = promptTemplateTextarea.value.trim() || DEFAULT_PROMPT.template;
+  const isDefault = defaultPromptCheckbox.checked;
+  
+  // Get current settings from storage
+  chrome.storage.sync.get(DEFAULT_SETTINGS, function(settings) {
+    // Create a copy of the prompt list
+    const updatedPrompts = [...settings.prompts];
+    
+    // Find index of current prompt
+    const promptIndex = updatedPrompts.findIndex(p => p.id === currentPromptId);
+    
+    if (promptIndex !== -1) {
+      // Update existing prompt
+      updatedPrompts[promptIndex] = {
+        ...updatedPrompts[promptIndex],
+        title,
+        template,
+        isDefault
+      };
+    } else {
+      // Add new prompt
+      updatedPrompts.push({
+        id: currentPromptId,
+        title,
+        template,
+        isDefault
+      });
+    }
+    
+    // If default prompt changed, unset default for other prompts
+    if (isDefault) {
+      updatedPrompts.forEach((p, index) => {
+        if (p.id !== currentPromptId) {
+          updatedPrompts[index].isDefault = false;
+        }
+      });
+    }
+    
+    // Save to storage
+    chrome.storage.sync.set({ 
+      prompts: updatedPrompts,
+      lastUsedPromptId: isDefault ? currentPromptId : settings.lastUsedPromptId
+    }, function() {
+      if (DEBUG) console.log('Saved prompt:', currentPromptId);
+      
+      // Update prompt list
+      updatePromptList(updatedPrompts);
+      
+      // Re-select current prompt
+      selectPrompt(currentPromptId, updatedPrompts);
+      
+      // Show success message
+      showSaveStatus('Prompt saved', 'success');
+    });
+  });
+}
+
+// Delete current prompt
+function deleteCurrentPrompt() {
+  if (!currentPromptId || currentPromptId === 'default') return;
+  
+  if (confirm('Are you sure you want to delete this prompt? This action cannot be undone.')) {
+    // Get current settings from storage
+    chrome.storage.sync.get(DEFAULT_SETTINGS, function(settings) {
+      // Filter out the prompt to delete
+      const updatedPrompts = settings.prompts.filter(p => p.id !== currentPromptId);
+      
+      // Check if a default prompt exists
+      const hasDefault = updatedPrompts.some(p => p.isDefault);
+      
+      // If no default prompt exists, set the first prompt as default
+      if (!hasDefault && updatedPrompts.length > 0) {
+        updatedPrompts[0].isDefault = true;
+      }
+      
+      // Update last used prompt ID
+      let lastUsedPromptId = settings.lastUsedPromptId;
+      if (lastUsedPromptId === currentPromptId) {
+        // Select default prompt or first prompt
+        const defaultPrompt = updatedPrompts.find(p => p.isDefault);
+        lastUsedPromptId = defaultPrompt ? defaultPrompt.id : (updatedPrompts[0] ? updatedPrompts[0].id : 'default');
+      }
+      
+      // Save to storage
+      chrome.storage.sync.set({ 
+        prompts: updatedPrompts,
+        lastUsedPromptId
+      }, function() {
+        if (DEBUG) console.log('Deleted prompt:', currentPromptId);
+        
+        // Update prompt list
+        updatePromptList(updatedPrompts);
+        
+        // Select new prompt
+        selectPrompt(lastUsedPromptId, updatedPrompts);
+        
+        // Show success message
+        showSaveStatus('Prompt deleted', 'success');
+      });
+    });
+  }
+}
+
+// Reset prompt to default
+function resetPromptToDefault() {
+  if (confirm('Are you sure you want to reset the prompt template to default? This will overwrite your current template.')) {
+    promptTemplateTextarea.value = DEFAULT_PROMPT.template;
+    saveCurrentPrompt();
+  }
+}
+
+// Save settings
+function saveSettings() {
+  try {
+    // Get temporary chat mode value
+    const temporaryChatValue = temporaryChatCheckbox ? temporaryChatCheckbox.checked : DEFAULT_SETTINGS.temporaryChat;
+    
+    // Save current prompt
+    saveCurrentPrompt();
+    
+    // Save temporary chat mode
+    chrome.storage.sync.set({ temporaryChat: temporaryChatValue }, function() {
+      if (DEBUG) console.log('Settings saved');
+      showSaveStatus('Settings saved successfully!', 'success');
+    });
+  } catch (error) {
+    if (DEBUG) console.error('Error saving settings:', error);
+    showSaveStatus('Error: ' + error.message, 'error');
+  }
+}
+
+// Export settings
+function exportSettings() {
+  chrome.storage.sync.get(null, function(settings) {
+    // Convert settings to JSON string
+    const settingsJSON = JSON.stringify(settings, null, 2);
+    
+    // Create blob
+    const blob = new Blob([settingsJSON], { type: 'application/json' });
+    
+    // Create download link
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chatgpt-page-assistant-settings.json';
+    
+    // Click link to download
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+    showSaveStatus('Settings exported successfully', 'success');
+  });
+}
+
+// Import settings
+function importSettings(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    try {
+      // Parse JSON
+      const settings = JSON.parse(e.target.result);
+      
+      // Validate settings
+      if (!settings || typeof settings !== 'object') {
+        throw new Error('Invalid settings file');
+      }
+      
+      // Validate prompts
+      if (settings.prompts && Array.isArray(settings.prompts)) {
+        // Check if each prompt has required properties
+        settings.prompts.forEach(prompt => {
+          if (!prompt.id || !prompt.title || !prompt.template) {
+            throw new Error('Invalid prompt format');
+          }
+        });
+        
+        // Check if a default prompt exists
+        const hasDefault = settings.prompts.some(p => p.isDefault);
+        if (!hasDefault && settings.prompts.length > 0) {
+          settings.prompts[0].isDefault = true;
+        }
+      } else {
+        // Set default prompts if none exist
+        settings.prompts = [DEFAULT_PROMPT];
+      }
+      
+      // Validate temporaryChat
+      if (typeof settings.temporaryChat !== 'boolean') {
+        // Set default temporaryChat if it doesn't exist or is invalid
+        settings.temporaryChat = DEFAULT_SETTINGS.temporaryChat;
+      }
+      
+      // Ensure lastUsedPromptId is valid
+      if (!settings.lastUsedPromptId || !settings.prompts.some(p => p.id === settings.lastUsedPromptId)) {
+        // Set to default prompt or first prompt
+        const defaultPrompt = settings.prompts.find(p => p.isDefault);
+        settings.lastUsedPromptId = defaultPrompt ? defaultPrompt.id : settings.prompts[0].id;
+      }
+      
+      // Save to storage
+      chrome.storage.sync.set(settings, function() {
+        if (DEBUG) console.log('Settings imported:', settings);
+        
+        // Reload settings
+        loadSettings();
+        
+        // Show success message
+        showSaveStatus('Settings imported successfully', 'success');
+      });
+    } catch (error) {
+      if (DEBUG) console.error('Error importing settings:', error);
+      showSaveStatus('Error: ' + error.message, 'error');
+    }
+  };
+  
+  reader.onerror = function() {
+    showSaveStatus('Error reading file', 'error');
+  };
+  
+  reader.readAsText(file);
+  
+  // Reset file input
+  event.target.value = '';
+}
+
 // Update debug info
-function updateToggleDebug(action) {
+function updateDebugInfo(action) {
   if (DEBUG && toggleDebug) {
     const state = temporaryChatCheckbox ? temporaryChatCheckbox.checked : 'unknown';
     toggleDebug.innerHTML += `<br>Toggle state: ${state} (${action}) at ${new Date().toLocaleTimeString()}`;
@@ -255,120 +497,7 @@ function updateToggleDebug(action) {
   }
 }
 
-// Update toggle visual state
-function updateToggleVisualState(isChecked) {
-  const toggleSlider = document.querySelector('.toggle-slider');
-  if (toggleSlider) {
-    if (DEBUG) console.log('Updating toggle visual state to:', isChecked);
-    
-    if (isChecked) {
-      toggleSlider.classList.add('checked');
-      toggleSlider.style.backgroundColor = '#10a37f';
-      // Only use CSS custom property - don't try to access pseudo-elements directly
-      toggleSlider.style.setProperty('--toggle-position', '30px');
-    } else {
-      toggleSlider.classList.remove('checked');
-      toggleSlider.style.backgroundColor = '#ccc';
-      // Only use CSS custom property - don't try to access pseudo-elements directly
-      toggleSlider.style.setProperty('--toggle-position', '0');
-    }
-  }
-}
-
-// Force save settings directly
-function forceSaveSettings() {
-  try {
-    const temporaryChatValue = temporaryChatCheckbox ? temporaryChatCheckbox.checked : DEFAULT_SETTINGS.temporaryChat;
-    
-    if (DEBUG) console.log('Force saving temporaryChat:', temporaryChatValue);
-    updateToggleDebug('force saving: ' + temporaryChatValue);
-    
-    // Update visual state again to be sure
-    updateToggleVisualState(temporaryChatValue);
-    
-    // Save only the temporaryChat setting
-    chrome.storage.sync.set({ temporaryChat: temporaryChatValue }, function() {
-      if (chrome.runtime.lastError) {
-        if (DEBUG) console.error('Error saving temporaryChat:', chrome.runtime.lastError);
-        updateToggleDebug('ERROR force saving: ' + chrome.runtime.lastError.message);
-      } else {
-        if (DEBUG) console.log('temporaryChat saved successfully');
-        updateToggleDebug('force saved successfully');
-        
-        // Verify the save
-        setTimeout(() => {
-          chrome.storage.sync.get(['temporaryChat'], function(result) {
-            if (DEBUG) console.log('Verified temporaryChat value:', result.temporaryChat);
-            updateToggleDebug('verified value: ' + result.temporaryChat);
-            
-            // Update visual state again after verification
-            updateToggleVisualState(result.temporaryChat);
-          });
-        }, 100);
-      }
-    });
-  } catch (error) {
-    if (DEBUG) console.error('Exception in forceSaveSettings:', error);
-    updateToggleDebug('EXCEPTION in force save: ' + error.message);
-  }
-}
-
-function saveSettings() {
-  try {
-    // Get current values
-    const promptValue = promptTemplateTextarea.value.trim();
-    const temporaryChatValue = temporaryChatCheckbox ? temporaryChatCheckbox.checked : DEFAULT_SETTINGS.temporaryChat;
-    
-    // Make sure prompt template is not empty
-    const finalPromptValue = promptValue || DEFAULT_SETTINGS.promptTemplate;
-    
-    // Create settings object
-    const settings = {
-      promptTemplate: finalPromptValue,
-      temporaryChat: temporaryChatValue
-    };
-    
-    if (DEBUG) console.log('Saving settings:', settings);
-    
-    // First save temporaryChat separately to ensure it's saved
-    chrome.storage.sync.set({ temporaryChat: temporaryChatValue }, function() {
-      if (DEBUG) console.log('temporaryChat saved separately:', temporaryChatValue);
-      
-      // Then save all settings
-      chrome.storage.sync.set(settings, function() {
-        if (chrome.runtime.lastError) {
-          if (DEBUG) console.error('Error saving settings:', chrome.runtime.lastError);
-          showSaveStatus('Error saving settings', 'error');
-        } else {
-          if (DEBUG) console.log('Settings saved successfully');
-          showSaveStatus('Settings saved successfully!', 'success');
-          
-          // Update the textarea with the saved value
-          promptTemplateTextarea.value = finalPromptValue;
-          
-          // Verify the save
-          chrome.storage.sync.get(null, function(items) {
-            if (DEBUG) console.log('Verified saved settings:', items);
-            if (DEBUG && toggleDebug) {
-              toggleDebug.innerHTML += '<br>Saved and verified: ' + JSON.stringify(items);
-            }
-          });
-        }
-      });
-    });
-  } catch (error) {
-    if (DEBUG) console.error('Exception in saveSettings:', error);
-    showSaveStatus('Error: ' + error.message, 'error');
-  }
-}
-
-function resetPromptToDefault() {
-  if (confirm('Are you sure you want to reset the prompt template to default? This will overwrite your current template.')) {
-    promptTemplateTextarea.value = DEFAULT_SETTINGS.promptTemplate;
-    saveSettings();
-  }
-}
-
+// Show save status
 function showSaveStatus(message, type) {
   saveStatus.textContent = message;
   saveStatus.className = `save-status ${type}`;
@@ -379,8 +508,6 @@ function showSaveStatus(message, type) {
     saveStatus.className = 'save-status';
   }, 3000);
 }
-
-// updatePreview function removed
 
 // Handle keyboard shortcuts
 document.addEventListener('keydown', function(e) {

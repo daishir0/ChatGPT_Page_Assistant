@@ -57,8 +57,12 @@ async function handleChatGPTRequest(prompt, originTabId) {
         return;
       }
     } else {
-      // Get temporary chat settings and create tab
-      chrome.storage.sync.get({ temporaryChat: false }, function(settings) {
+      // 一時チャット設定を取得して新しいタブを作成
+      chrome.storage.sync.get({
+        temporaryChat: false,
+        prompts: [],
+        lastUsedPromptId: 'default'
+      }, function(settings) {
         const baseUrl = 'https://chatgpt.com/';
         const chatGPTUrl = settings.temporaryChat ? baseUrl + '?temporary-chat=true' : baseUrl;
         

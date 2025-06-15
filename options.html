@@ -15,23 +15,55 @@
 
         <main>
             <section class="settings-section">
-                <h2>Prompt Template</h2>
+                <h2>Prompt Templates</h2>
                 <p class="description">
-                    Customize the prompt template that will be sent to ChatGPT. 
+                    Customize the prompt templates that will be sent to ChatGPT.
                     Use placeholders: <code>{pageTitle}</code>, <code>{pageUrl}</code>, <code>{selectedText}</code>, <code>{question}</code>
                 </p>
                 
-                <div class="form-group">
-                    <label for="promptTemplate">Prompt Template:</label>
-                    <textarea 
-                        id="promptTemplate" 
-                        rows="12" 
-                        placeholder="Enter your custom prompt template..."
-                    ></textarea>
-                </div>
+                <div class="prompt-management">
+                    <div class="prompt-list-container">
+                        <div class="prompt-list-header">
+                            <h3>Prompt List</h3>
+                            <button id="addNewPrompt" class="btn-small">Add New</button>
+                        </div>
+                        <ul id="promptList" class="prompt-list">
+                            <!-- Prompt list will be generated dynamically -->
+                        </ul>
+                    </div>
+                    
+                    <div class="prompt-editor">
+                        <div class="form-group">
+                            <label for="promptTitle">Prompt Title:</label>
+                            <input
+                                type="text"
+                                id="promptTitle"
+                                placeholder="Enter prompt title..."
+                            />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="promptTemplate">Prompt Template:</label>
+                            <textarea
+                                id="promptTemplate"
+                                rows="12"
+                                placeholder="Enter your custom prompt template..."
+                            ></textarea>
+                        </div>
+                        
+                        <div class="form-group checkbox-container">
+                            <label for="defaultPrompt" class="checkbox-label">
+                                <input type="checkbox" id="defaultPrompt" class="checkbox-input">
+                                <span class="checkbox-text">Set as default prompt</span>
+                            </label>
+                        </div>
 
-                <div class="form-actions">
-                    <button id="resetPrompt" class="btn-secondary">Reset to Default</button>
+                        <div class="form-actions">
+                            <button id="savePrompt" class="btn-primary">Save</button>
+                            <button id="deletePrompt" class="btn-danger">Delete</button>
+                            <button id="resetPrompt" class="btn-secondary">Reset to Default</button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -51,6 +83,19 @@
                     
                     <!-- Debug info -->
                     <div id="toggleDebug" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+                </div>
+            </section>
+            
+            <section class="settings-section">
+                <h2>Import/Export Settings</h2>
+                <p class="description">
+                    Save and load all settings (prompt list and temporary chat mode) as a file.
+                </p>
+                
+                <div class="form-actions import-export-buttons">
+                    <button id="exportSettings" class="btn-secondary">Export Settings</button>
+                    <button id="importSettings" class="btn-secondary">Import Settings</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
                 </div>
             </section>
 

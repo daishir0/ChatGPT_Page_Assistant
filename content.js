@@ -4,10 +4,29 @@
 let selectedText = '';
 let questionDialog = null;
 let floatingButton = null;
+let promptsDropdown = null;
 
-// Listen for text selection events
-// Debug flag
+// デバッグフラグ
 const DEBUG = false;
+
+// デフォルトプロンプト
+const DEFAULT_PROMPT = {
+  id: 'default',
+  title: 'デフォルトプロンプト',
+  template: `I have a question about text selected from a web page.
+
+**Web Page Information:**
+Title: {pageTitle}
+URL: {pageUrl}
+
+**Selected Text:**
+{selectedText}
+
+**Question:**
+{question}
+
+Please answer my question based on the selected text content above.`
+};
 
 // Only log if debug is enabled
 function debugLog(...args) {
@@ -57,36 +76,127 @@ function showFloatingButton(mousePosition) {
   // Remove existing button
   removeFloatingButton();
   
-  // Create button element
-  floatingButton = document.createElement('div');
-  floatingButton.className = 'chatgpt-floating-button';
-  floatingButton.innerHTML = `
-    <button class="ask-button" title="Ask ChatGPT">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        <path d="M8 10h8"/>
-        <path d="M8 14h6"/>
-      </svg>
-      Question
-    </button>
-  `;
-  
-  // Position button to the right of mouse position
-  floatingButton.style.left = Math.min(mousePosition.x + 10, window.innerWidth + window.pageXOffset - 80) + 'px';
-  floatingButton.style.top = (mousePosition.y - 35) + 'px';
-  
-  document.body.appendChild(floatingButton);
-  
-  // Handle button click
-  const askButton = floatingButton.querySelector('.ask-button');
-  askButton.addEventListener('click', function(e) {
-    debugLog('Question button clicked');
-    e.stopPropagation();
-    // Show dialog in center of screen (position parameters are ignored in new implementation)
-    showQuestionDialog();
+  // ストレージから利用可能なプロンプトを取得
+  chrome.storage.sync.get({
+    prompts: [DEFAULT_PROMPT],
+    lastUsedPromptId: 'default'
+  }, function(settings) {
+    // ボタン要素を作成
+    floatingButton = document.createElement('div');
+    floatingButton.className = 'chatgpt-floating-button';
     
-    // Remove the floating button after clicking to prevent it from being covered
-    removeFloatingButton();
+    // プロンプトが複数ある場合はドロップダウンを表示
+    if (settings.prompts.length > 1) {
+      // デフォルトまたは最後に使用したプロンプトを取得
+      const defaultPrompt = settings.prompts.find(p => p.id === settings.lastUsedPromptId) ||
+                           settings.prompts.find(p => p.isDefault) ||
+                           settings.prompts[0];
+      
+      floatingButton.innerHTML = `
+        <button class="ask-button" title="Ask ChatGPT using ${defaultPrompt.title}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M8 10h8"/>
+            <path d="M8 14h6"/>
+          </svg>
+          ChatGPT: ${defaultPrompt.title}
+        </button>
+        <div class="prompt-dropdown-container">
+          <button class="prompt-dropdown-toggle" title="Select prompt">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="prompt-dropdown-menu">
+            ${settings.prompts.map(prompt =>
+              `<div class="prompt-dropdown-item${prompt.id === defaultPrompt.id ? ' active' : ''}" data-id="${prompt.id}">
+                ${prompt.title}${prompt.isDefault ? ' (デフォルト)' : ''}
+              </div>`
+            ).join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      // プロンプトが1つしかない場合は通常のボタンを表示
+      // プロンプトが1つしかない場合でも、そのプロンプトのタイトルを表示
+      const defaultPrompt = settings.prompts[0] || DEFAULT_PROMPT;
+      floatingButton.innerHTML = `
+        <button class="ask-button" title="Ask ChatGPT using ${defaultPrompt.title}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M8 10h8"/>
+            <path d="M8 14h6"/>
+          </svg>
+          ChatGPT: ${defaultPrompt.title}
+        </button>
+      `;
+    }
+    
+    // Position button to the right of mouse position
+    floatingButton.style.left = Math.min(mousePosition.x + 10, window.innerWidth + window.pageXOffset - 80) + 'px';
+    floatingButton.style.top = (mousePosition.y - 35) + 'px';
+    
+    document.body.appendChild(floatingButton);
+    
+    // ボタンクリックのハンドリング
+    const askButton = floatingButton.querySelector('.ask-button');
+    askButton.addEventListener('click', function(e) {
+      debugLog('Question button clicked');
+      e.stopPropagation();
+      // ダイアログを画面中央に表示
+      showQuestionDialog();
+      
+      // クリック後にフローティングボタンを削除
+      removeFloatingButton();
+    });
+    
+    // プロンプト選択ドロップダウンのハンドリング
+    const dropdownToggle = floatingButton.querySelector('.prompt-dropdown-toggle');
+    if (dropdownToggle) {
+      dropdownToggle.addEventListener('click', function(e) {
+        debugLog('Dropdown toggle clicked');
+        e.stopPropagation();
+        
+        const menu = floatingButton.querySelector('.prompt-dropdown-menu');
+        menu.classList.toggle('show');
+        
+        // 外部クリックでドロップダウンを閉じるイベントリスナーを追加
+        if (menu.classList.contains('show')) {
+          setTimeout(() => {
+            document.addEventListener('click', closeDropdown);
+          }, 0);
+        }
+      });
+      
+      // ドロップダウンアイテムのクリックイベント
+      const dropdownItems = floatingButton.querySelectorAll('.prompt-dropdown-item');
+      dropdownItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          debugLog('Dropdown item clicked:', this.dataset.id);
+          e.stopPropagation();
+          
+          // 選択したプロンプトIDを保存
+          const promptId = this.dataset.id;
+          chrome.storage.sync.set({ lastUsedPromptId: promptId }, function() {
+            debugLog('Last used prompt ID saved:', promptId);
+          });
+          
+          // アクティブクラスを更新
+          dropdownItems.forEach(i => i.classList.remove('active'));
+          this.classList.add('active');
+          
+          // ドロップダウンを閉じる
+          const menu = floatingButton.querySelector('.prompt-dropdown-menu');
+          menu.classList.remove('show');
+          
+          // ダイアログを表示
+          showQuestionDialog();
+          
+          // フローティングボタンを削除
+          removeFloatingButton();
+        });
+      });
+    }
   });
 }
 
@@ -186,9 +296,8 @@ function setupDialogEvents() {
   
   askBtn.addEventListener('click', function() {
     const question = questionInput.value.trim();
-    if (question) {
-      sendToChatGPT(selectedText, question);
-    }
+    // 質問が空でも送信できるように修正
+    sendToChatGPT(selectedText, question);
   });
   
   // Submit on Enter (Shift+Enter for new line)
@@ -196,9 +305,8 @@ function setupDialogEvents() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const question = questionInput.value.trim();
-      if (question) {
-        sendToChatGPT(selectedText, question);
-      }
+      // 質問が空でも送信できるように修正
+      sendToChatGPT(selectedText, question);
     }
   });
   
@@ -222,11 +330,22 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Send question to ChatGPT
+// ドロップダウンを閉じる関数
+function closeDropdown(e) {
+  if (floatingButton) {
+    const menu = floatingButton.querySelector('.prompt-dropdown-menu');
+    if (menu && !menu.contains(e.target) && !e.target.matches('.prompt-dropdown-toggle')) {
+      menu.classList.remove('show');
+      document.removeEventListener('click', closeDropdown);
+    }
+  }
+}
+
+// ChatGPTに質問を送信
 function sendToChatGPT(selectedText, question) {
-  // Create prompt (async)
+  // プロンプトを作成（非同期）
   createPrompt(selectedText, question).then(prompt => {
-    debugLog('Generated prompt:', prompt);
+    debugLog('生成されたプロンプト:', prompt);
     
     // 新しいタブを開かずに、直接background.jsに処理を委任する
     // background.jsが既存のタブを検索するか、必要に応じて新しいタブを開く
@@ -235,35 +354,36 @@ function sendToChatGPT(selectedText, question) {
       prompt: prompt
     });
     
-    debugLog('Sent prompt to background script');
+    debugLog('プロンプトをバックグラウンドスクリプトに送信しました');
   });
   
   removeQuestionDialog();
 }
 
-// Create prompt from template
+// テンプレートからプロンプトを作成
 function createPrompt(selectedText, question) {
   const pageTitle = document.title;
   const pageUrl = window.location.href;
   
-  // Get prompt template from settings
+  // 設定からプロンプトテンプレートを取得
   return new Promise((resolve) => {
     chrome.storage.sync.get({
-      promptTemplate: `I have a question about text selected from a web page.
-
-**Web Page Information:**
-Title: {pageTitle}
-URL: {pageUrl}
-
-**Selected Text:**
-{selectedText}
-
-**Question:**
-{question}
-
-Please answer my question based on the selected text content above.`
+      prompts: [DEFAULT_PROMPT],
+      lastUsedPromptId: 'default'
     }, function(settings) {
-      const prompt = settings.promptTemplate
+      // 最後に使用したプロンプトまたはデフォルトプロンプトを取得
+      const promptToUse = settings.prompts.find(p => p.id === settings.lastUsedPromptId) ||
+                         settings.prompts.find(p => p.isDefault) ||
+                         settings.prompts[0] ||
+                         DEFAULT_PROMPT;
+      
+      debugLog('使用するプロンプト:', promptToUse.title);
+      
+      // プロンプトテンプレートを取得
+      const template = promptToUse.template;
+      
+      // プレースホルダーを置換
+      const prompt = template
         .replace(/\{pageTitle\}/g, pageTitle)
         .replace(/\{pageUrl\}/g, pageUrl)
         .replace(/\{selectedText\}/g, selectedText)
