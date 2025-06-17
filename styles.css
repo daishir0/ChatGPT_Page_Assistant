@@ -230,6 +230,7 @@
   resize: vertical;
   outline: none;
   margin-bottom: 16px;
+  box-sizing: border-box;
 }
 
 .chatgpt-question-dialog .question-input:focus {

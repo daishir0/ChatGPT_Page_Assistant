@@ -38,12 +38,23 @@ ChatGPT Page Assistant is a Chrome extension that allows you to ask ChatGPT ques
 - Option to use temporary chat mode (conversations won't be saved)
 - Efficiently reuses existing ChatGPT tabs instead of opening new ones
 - Includes page information (title and URL) for better context
+- Responsive UI with proper CSS box model handling for consistent display across different websites
+
+## Privacy
+- All processing of your selected text happens locally until you submit your question to ChatGPT
+- The extension only processes essential information: selected text, your questions, page title/URL, and your settings
+- All settings and preferences are stored locally in your browser
+- No data is sent to any third-party servers other than OpenAI's ChatGPT service when you submit a question
 
 ## Notes
 - You need to have a ChatGPT account to use this extension
 - The extension requires permissions to access the current tab and ChatGPT websites
-- All processing of your selected text happens locally until you submit your question to ChatGPT
 - For the best experience, ensure you're logged into ChatGPT before using the extension
+
+## Recent Updates
+- Fixed CSS issue where the question input field could overflow its container in certain situations
+- Improved UI responsiveness and consistency across different websites
+- Enhanced prompt template management with better visual feedback
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -90,12 +101,23 @@ ChatGPT Page Assistantは、ウェブページ上で選択したテキストに�
 - 一時チャットモードのオプション（会話が保存されません）
 - 新しいタブを開く代わりに既存のChatGPTタブを効率的に再利用
 - より良いコンテキストのためにページ情報（タイトルとURL）を含める
+- 一貫した表示のためのレスポンシブUIとCSSボックスモデルの適切な処理
+
+## プライバシー
+- 選択したテキストの処理は、質問をChatGPTに送信するまですべてローカルで行われます
+- この拡張機能は必要な情報のみを処理します：選択テキスト、質問、ページタイトル/URL、および設定
+- すべての設定と環境設定はブラウザにローカルに保存されます
+- 質問を送信する際にOpenAIのChatGPTサービス以外のサードパーティサーバーにデータが送信されることはありません
 
 ## 注意点
 - この拡張機能を使用するにはChatGPTアカウントが必要です
 - この拡張機能は現在のタブとChatGPTウェブサイトにアクセスするための権限が必要です
-- 選択したテキストの処理は、質問をChatGPTに送信するまですべてローカルで行われます
 - 最良の体験を得るために、拡張機能を使用する前にChatGPTにログインしていることを確認してください
+
+## 最近の更新
+- 特定の状況で質問入力フィールドがコンテナからはみ出す可能性があるCSSの問題を修正
+- 異なるウェブサイト間でのUIの応答性と一貫性を向上
+- より良い視覚的フィードバックによるプロンプトテンプレート管理の強化
 
 ## ライセンス
 このプロジェクトはMITライセンスの下でライセンスされています。詳細はLICENSEファイルを参照してください。
