@@ -16,7 +16,10 @@ ChatGPT Page Assistant is a Chrome extension that allows you to ask ChatGPT ques
 5. The extension should now be installed and visible in your Chrome toolbar
 
 ### Method 2: From Chrome Web Store
-*(Note: This option will be available once the extension is published to the Chrome Web Store)*
+1. Visit the Chrome Web Store page: [ChatGPT Page Assistant](https://chromewebstore.google.com/detail/chatgpt-page-assistant/boeeliegofkbpnkklggbfglkhgmnnpej)
+2. Click "Add to Chrome" button
+3. Confirm the installation by clicking "Add extension" in the popup dialog
+4. The extension will be automatically installed and added to your Chrome toolbar
 
 ## Usage
 1. Select text on any webpage that you want to ask ChatGPT about
@@ -79,7 +82,10 @@ ChatGPT Page Assistantは、ウェブページ上で選択したテキストに�
 5. 拡張機能がインストールされ、Chromeツールバーに表示されるはずです
 
 ### 方法2: Chrome ウェブストアからのインストール
-*(注: この選択肢は拡張機能がChrome ウェブストアに公開された後に利用可能になります)*
+1. Chrome ウェブストアのページにアクセスします: [ChatGPT Page Assistant](https://chromewebstore.google.com/detail/chatgpt-page-assistant/boeeliegofkbpnkklggbfglkhgmnnpej)
+2. 「Chromeに追加」ボタンをクリックします
+3. ポップアップダイアログで「拡張機能を追加」をクリックして、インストールを確認します
+4. 拡張機能が自動的にインストールされ、Chromeツールバーに追加されます
 
 ## 使い方
 1. ChatGPTに質問したいテキストをウェブページ上で選択します
