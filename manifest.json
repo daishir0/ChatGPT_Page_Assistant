@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Page Assistant",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Ask ChatGPT about selected text",
   
   "permissions": [
