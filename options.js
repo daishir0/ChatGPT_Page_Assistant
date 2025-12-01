@@ -25,6 +25,7 @@ Please answer my question based on the selected text content above.`,
 const DEFAULT_SETTINGS = {
   prompts: [DEFAULT_PROMPT],
   temporaryChat: false,
+  requireCtrlKey: true,
   lastUsedPromptId: 'default'
 };
 
@@ -34,6 +35,7 @@ let promptTitleInput;
 let promptTemplateTextarea;
 let defaultPromptCheckbox;
 let temporaryChatCheckbox;
+let requireCtrlKeyCheckbox;
 let savePromptButton;
 let deletePromptButton;
 let resetPromptButton;
@@ -69,6 +71,7 @@ function initializeElements() {
   promptTemplateTextarea = document.getElementById('promptTemplate');
   defaultPromptCheckbox = document.getElementById('defaultPrompt');
   temporaryChatCheckbox = document.getElementById('temporaryChat');
+  requireCtrlKeyCheckbox = document.getElementById('requireCtrlKey');
   savePromptButton = document.getElementById('savePrompt');
   deletePromptButton = document.getElementById('deletePrompt');
   resetPromptButton = document.getElementById('resetPrompt');
@@ -152,7 +155,13 @@ function loadSettings() {
       temporaryChatCheckbox.checked = settings.temporaryChat;
       if (DEBUG) console.log('Temporary chat mode set to:', temporaryChatCheckbox.checked);
     }
-    
+
+    // Set require Ctrl key mode
+    if (requireCtrlKeyCheckbox) {
+      requireCtrlKeyCheckbox.checked = settings.requireCtrlKey;
+      if (DEBUG) console.log('Require Ctrl key set to:', requireCtrlKeyCheckbox.checked);
+    }
+
     // Select last used prompt or default prompt
     const promptToSelect = settings.lastUsedPromptId || 'default';
     selectPrompt(promptToSelect, settings.prompts);
@@ -367,12 +376,17 @@ function saveSettings() {
   try {
     // Get temporary chat mode value
     const temporaryChatValue = temporaryChatCheckbox ? temporaryChatCheckbox.checked : DEFAULT_SETTINGS.temporaryChat;
-    
+    // Get require Ctrl key value
+    const requireCtrlKeyValue = requireCtrlKeyCheckbox ? requireCtrlKeyCheckbox.checked : DEFAULT_SETTINGS.requireCtrlKey;
+
     // Save current prompt
     saveCurrentPrompt();
-    
-    // Save temporary chat mode
-    chrome.storage.sync.set({ temporaryChat: temporaryChatValue }, function() {
+
+    // Save settings
+    chrome.storage.sync.set({
+      temporaryChat: temporaryChatValue,
+      requireCtrlKey: requireCtrlKeyValue
+    }, function() {
       if (DEBUG) console.log('Settings saved');
       showSaveStatus('Settings saved successfully!', 'success');
     });
@@ -452,7 +466,13 @@ function importSettings(event) {
         // Set default temporaryChat if it doesn't exist or is invalid
         settings.temporaryChat = DEFAULT_SETTINGS.temporaryChat;
       }
-      
+
+      // Validate requireCtrlKey
+      if (typeof settings.requireCtrlKey !== 'boolean') {
+        // Set default requireCtrlKey if it doesn't exist or is invalid
+        settings.requireCtrlKey = DEFAULT_SETTINGS.requireCtrlKey;
+      }
+
       // Ensure lastUsedPromptId is valid
       if (!settings.lastUsedPromptId || !settings.prompts.some(p => p.id === settings.lastUsedPromptId)) {
         // Set to default prompt or first prompt

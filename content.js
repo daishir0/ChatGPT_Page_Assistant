@@ -38,18 +38,18 @@ function debugLog(...args) {
 document.addEventListener('mouseup', function(e) {
   debugLog('Mouse up event detected');
   // Ignore clicks on existing dialog or button
-  if (e.target.closest('.chatgpt-question-dialog') || 
+  if (e.target.closest('.chatgpt-question-dialog') ||
       e.target.closest('.chatgpt-floating-button')) {
     return;
   }
-  
+
   const selection = window.getSelection();
   const text = selection.toString().trim();
-  
+
   if (text.length > 0) {
     debugLog('Text selected:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
     selectedText = text;
-    
+
     // Get mouse position (end of selection)
     const mousePosition = {
       x: e.pageX,
@@ -57,12 +57,24 @@ document.addEventListener('mouseup', function(e) {
       clientX: e.clientX,
       clientY: e.clientY
     };
-    
-    // Show floating button after a short delay
-    setTimeout(() => {
-      debugLog('Showing floating button');
-      showFloatingButton(mousePosition);
-    }, 100);
+
+    // Store Ctrl key state at the time of mouseup
+    const ctrlKeyPressed = e.ctrlKey || e.metaKey;
+
+    // Check settings and show floating button
+    chrome.storage.sync.get({ requireCtrlKey: true }, function(settings) {
+      // If requireCtrlKey is enabled and Ctrl key was not pressed, skip popup
+      if (settings.requireCtrlKey && !ctrlKeyPressed) {
+        debugLog('Ctrl key not pressed, skipping popup (requireCtrlKey is enabled)');
+        return;
+      }
+
+      // Show floating button after a short delay
+      setTimeout(() => {
+        debugLog('Showing floating button');
+        showFloatingButton(mousePosition);
+      }, 100);
+    });
   } else {
     // Remove button and dialog if no text is selected
     removeFloatingButton();
